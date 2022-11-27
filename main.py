@@ -1,26 +1,27 @@
-from flask import Flask
-from flask_restful import Resource, Api, reqparse
+from flask import Flask, request
 import pandas as pd
-import ast
 app = Flask(__name__)
-api = Api(app)
 
-class Users(Resource):
-    def get(self):
+@app.route("/users", methods=["GET", "POST"])
+def user():
+    if request.method == "GET":
         df = pd.read_csv("user.csv")
         data = df.to_dict()
         return {"data": data}, 200
     
-
-    def post(self):
+    if request.method == "POST":
         df = pd.read_csv("user.csv")
-        parser = reqparse.RequestParser()
 
-        parser.add_argument("userId", required=True)
-        parser.add_argument("name", required=True)
-        parser.add_argument("city", required=True)
+        args = dict(request.args)
 
-        args = parser.parse_args()
+        if args["locations"] == "None":
+            locations = []
+        else:
+            aux = args["locations"].split("[")[1].split("]")[0].split("'")
+            locations = []
+            for i in range(len(aux)):
+                if i % 2 == 1:
+                    locations.append(aux[i])
 
         if args["userId"] in list(df["userId"]):
             return {
@@ -31,26 +32,14 @@ class Users(Resource):
                 "userId": args["userId"],
                 "name": args["name"],
                 "city": args["city"],
-                "locations": [[]]
+                "locations": [locations]
             })
 
             
-            pd.concat([df, aux])
+            df = pd.concat([df, aux], ignore_index=True)
             df.to_csv("user.csv", index=False)
 
-            return {"data", df.to_dict()}, 200
-
-class Locations(Resource):
-    def get(self):
-        df = pd.read_csv("locations.csv")
-        data = df.to_dict()
-        return {"data": data}, 200
-
-    def post(self):
-        pass
-
-api.add_resource(Users, "/users")
-api.add_resource(Locations, "/locations")
+            return {"data": df.to_dict()}, 200
 
 
 
